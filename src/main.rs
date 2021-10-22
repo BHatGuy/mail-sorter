@@ -1,10 +1,14 @@
-mod imap_cli;
-use imap_cli::ImapCli;
+mod filter_client;
+use filter_client::FilterClient;
 
 fn main() {
-    let mut client = ImapCli::new("imap.gmx.net", 993, "malte-m@gmx.net", "thomasB661")
+    let mut client = FilterClient::new("imap.gmx.net", 993, "malte-m@gmx.net", "thomasB661")
         .expect("cant establish session");
-    let boxes = client.list_boxes().unwrap();
 
-    println!("{:?}", boxes);
+    let unread = client.get_all("INBOX").unwrap();
+
+
+    let rest = client.filter("INBOX", &unread, "no-reply@mail.instagram.com", "Test").unwrap();
+    println!("{:?}", unread.len() - rest.len());
+
 }
