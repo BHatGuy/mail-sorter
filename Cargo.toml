@@ -8,3 +8,7 @@ edition = "2021"
 [dependencies]
 imap = "3.0.0-alpha.4"
 native-tls = "0.2.8"
+clap = "2.33.3"
+toml = "0.5"
+serde = "1.0.130"
+serde_derive = "1.0.130"    

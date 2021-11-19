@@ -1,3 +1,4 @@
+use crate::config::Pattern;
 use imap;
 use imap::types::Uid;
 use native_tls;
@@ -41,7 +42,6 @@ impl FilterClient {
     pub fn get_all(&mut self, mailbox: &str) -> imap::error::Result<HashSet<Uid>> {
         let mb = self.session.select(mailbox)?;
         let count = mb.exists;
-        println!("{}", count);
 
         self.get(&format!("1:{}", count))
     }
@@ -50,16 +50,33 @@ impl FilterClient {
         &mut self,
         mailbox: &str,
         messages: &HashSet<Uid>,
-        pattern: &str,
+        patterns: &Vec<Pattern>,
         dest: &str,
     ) -> imap::error::Result<HashSet<u32>> {
         let mut moved = HashSet::new();
         self.session.select(mailbox)?;
         let uid_set = Vec::from_iter(messages.iter().map(|x| format!("{}", x))).join(",");
-        let fetched = &self
-            .session
-            .uid_fetch(uid_set, "(FLAGS INTERNALDATE RFC822.SIZE ENVELOPE UID)")?;
+        let fetched = &self.session.uid_fetch(
+            uid_set,
+            "(FLAGS INTERNALDATE RFC822.SIZE ENVELOPE UID BODY.PEEK[])",
+        )?;
         for f in fetched {
+            for p in patterns {
+                if check_pattern(&p, f) {
+                    self.session.uid_mv(format!("{}", f.uid.unwrap()), dest)?;
+                    moved.insert(f.uid.unwrap());
+                    break;
+                }
+            }
+        }
+        Ok(messages - &moved)
+    }
+}
+
+// TODO refactor?
+fn check_pattern(p: &Pattern, f: &imap::types::Fetch) -> bool {
+    match p {
+        Pattern::From(from_pattern) => {
             if let Some(envelope) = f.envelope() {
                 if let Some(from) = envelope.from.as_ref() {
                     for address in from {
@@ -67,14 +84,28 @@ impl FilterClient {
                             std::str::from_utf8(&address.mailbox.as_ref().unwrap()).unwrap();
                         let host = std::str::from_utf8(&address.host.as_ref().unwrap()).unwrap();
                         let from_address = format!("{}@{}", mailbox, host);
-                        if from_address.contains(pattern) {
-                            self.session.uid_mv(format!("{}", f.uid.unwrap()), dest)?;
-                            moved.insert(f.uid.unwrap());
+                        if from_address.contains(from_pattern) {
+                            return true;
                         }
                     }
                 }
             }
         }
-        Ok(messages - &moved)
-    }
+        Pattern::Subject(subject_pattern) => {
+            if let Some(envelope) = f.envelope() {
+                if let Some(subject) = envelope.subject.as_ref() {
+                    let subject = std::str::from_utf8(subject).unwrap();
+                    if subject.contains(subject_pattern) {
+                        return true;
+                    }
+                }
+            }
+        }
+        Pattern::Content(content) => {
+            let body =
+                dbg!(std::str::from_utf8(f.body().expect("no body?")).expect("no valid string"));
+            return body.contains(content);
+        }
+    };
+    return false;
 }
