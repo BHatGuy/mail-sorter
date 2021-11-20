@@ -61,12 +61,14 @@ impl FilterClient {
             "(FLAGS INTERNALDATE RFC822.SIZE ENVELOPE UID BODY.PEEK[])",
         )?;
         for f in fetched {
-            for p in patterns {
-                if check_pattern(&p, f) {
-                    self.session.uid_mv(format!("{}", f.uid.unwrap()), dest)?;
-                    moved.insert(f.uid.unwrap());
-                    break;
-                }
+            let matches = patterns
+                .iter()
+                .map(|p| check_pattern(&p, f))
+                .reduce(|a, b| a && b)
+                .unwrap();
+            if matches {
+                self.session.uid_mv(format!("{}", f.uid.unwrap()), dest)?;
+                moved.insert(f.uid.unwrap());
             }
         }
         Ok(messages - &moved)
@@ -74,6 +76,7 @@ impl FilterClient {
 }
 
 // TODO refactor?
+// TODO regex?
 fn check_pattern(p: &Pattern, f: &imap::types::Fetch) -> bool {
     match p {
         Pattern::From(from_pattern) => {

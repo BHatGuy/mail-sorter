@@ -24,6 +24,7 @@ fn main() {
     let config = config::read_config(conf_path);
 
     for account in config.accounts {
+        println!("{} ({}):", account.username, account.address);
         let mut client = FilterClient::new(
             &account.address,
             account.port,
@@ -33,17 +34,16 @@ fn main() {
         .expect("cant establish session");
 
         if let Some(_) = matches.subcommand_matches("list") {
-            println!("Folders in {} ({}):", account.username, account.address);
             let boxes = client.list_boxes().expect("List Error!");
             for b in boxes {
-                println!("\t{}", b);
+                println!("{}", b);
             }
         } else if let Some(_) = matches.subcommand_matches("sort") {
             for filter in account.filters {
                 let mut messages = client.get_unread(&filter.source).unwrap();
                 let start_count = messages.len();
                 print!(
-                    "Filter {} -> {} ({:?}) ... ",
+                    "{} -> {} ({:?}) ",
                     filter.source, filter.destination, filter.patterns
                 );
 
