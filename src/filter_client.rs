@@ -50,7 +50,7 @@ impl FilterClient {
         let mb = self.session.select(mailbox)?;
         let count = mb.exists;
 
-        self.get(&format!("{}:{}", count-n, count))
+        self.get(&format!("{}:{}", count - n, count))
     }
 
     pub fn filter(
@@ -63,11 +63,17 @@ impl FilterClient {
         let mut moved = HashSet::new();
         self.session.select(mailbox)?;
         let uid_set = Vec::from_iter(messages.iter().map(|x| format!("{}", x))).join(",");
-        let fetched = &self.session.uid_fetch(
-            uid_set,
-            "(FLAGS INTERNALDATE RFC822.SIZE ENVELOPE UID BODY.PEEK[])",
-        )?;
-        for f in fetched {
+        let body_needed = patterns.iter().any(|p| match p {
+            Pattern::Content(_) => true,
+            _ => false,
+        });
+        let query = if body_needed {
+            "(FLAGS INTERNALDATE RFC822.SIZE ENVELOPE UID BODY.PEEK[])"
+        } else {
+            "(FLAGS INTERNALDATE RFC822.SIZE ENVELOPE UID)"
+        };
+        let fetched = self.session.uid_fetch(uid_set, query)?;
+        for f in &fetched {
             let matches = patterns
                 .iter()
                 .map(|p| check_pattern(&p, f))
