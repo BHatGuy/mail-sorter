@@ -3,6 +3,7 @@ mod config;
 mod filter_client;
 use clap::{App, Arg, SubCommand};
 use filter_client::FilterClient;
+use config::Selection;
 
 fn main() {
     let matches = App::new("imap-sorter")
@@ -18,7 +19,9 @@ fn main() {
                 .default_value("./config.toml"), // TODO change
         )
         .subcommand(SubCommand::with_name("list").about("list folders"))
-        .subcommand(SubCommand::with_name("sort").about("sort mail"))
+        .subcommand(
+            SubCommand::with_name("sort").about("sort mail")
+        )
         .get_matches();
     let conf_path = matches.value_of("config").unwrap();
     let config = config::read_config(conf_path);
@@ -40,7 +43,11 @@ fn main() {
             }
         } else if let Some(_) = matches.subcommand_matches("sort") {
             for filter in account.filters {
-                let mut messages = client.get_unread(&filter.source).unwrap();
+                let mut messages = match filter.selection {
+                    Selection::All() => {client.get_all(&filter.source)},
+                    Selection::Latest(n) => {client.get_n(&filter.source, n)},
+                    Selection::Unread() => {client.get_unread(&filter.source)}
+                }.unwrap();
                 let start_count = messages.len();
                 print!(
                     "{} -> {} ({:?}) ",

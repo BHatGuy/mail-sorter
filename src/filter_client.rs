@@ -46,6 +46,13 @@ impl FilterClient {
         self.get(&format!("1:{}", count))
     }
 
+    pub fn get_n(&mut self, mailbox: &str, n: u32) -> imap::error::Result<HashSet<Uid>> {
+        let mb = self.session.select(mailbox)?;
+        let count = mb.exists;
+
+        self.get(&format!("{}:{}", count-n, count))
+    }
+
     pub fn filter(
         &mut self,
         mailbox: &str,

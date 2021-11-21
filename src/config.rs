@@ -19,6 +19,7 @@ pub struct Account {
 pub struct Filter {
     pub source: String,
     pub destination: String,
+    pub selection: Selection,
     pub patterns: Vec<Pattern>,
 }
 
@@ -27,6 +28,13 @@ pub enum Pattern {
     From(String),
     Subject(String),
     Content(String),
+}
+
+#[derive(Deserialize, Debug)]
+pub enum Selection {
+    Unread(),
+    All(),
+    Latest(u32)
 }
 
 pub fn read_config(path: &str) -> Config {
