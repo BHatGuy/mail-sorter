@@ -26,6 +26,7 @@ pub struct Filter {
 #[derive(Deserialize, Debug)]
 pub enum Pattern {
     From(String),
+    To(String),
     Subject(String),
     Content(String),
 }

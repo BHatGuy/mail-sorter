@@ -74,11 +74,7 @@ impl FilterClient {
         };
         let fetched = self.session.uid_fetch(uid_set, query)?;
         for f in &fetched {
-            let matches = patterns
-                .iter()
-                .map(|p| check_pattern(&p, f))
-                .reduce(|a, b| a && b)
-                .unwrap();
+            let matches = patterns.iter().any(|p| check_pattern(&p, f));
             if matches {
                 self.session.uid_mv(format!("{}", f.uid.unwrap()), dest)?;
                 moved.insert(f.uid.unwrap());
@@ -96,6 +92,24 @@ fn check_pattern(p: &Pattern, f: &imap::types::Fetch) -> bool {
             if let Some(envelope) = f.envelope() {
                 if let Some(from) = envelope.from.as_ref() {
                     for address in from {
+                        let mailbox =
+                            std::str::from_utf8(&address.mailbox.as_ref().unwrap()).unwrap();
+                        let host = std::str::from_utf8(&address.host.as_ref().unwrap()).unwrap();
+                        let from_address = format!("{}@{}", mailbox, host);
+                        if from_address.contains(from_pattern) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        Pattern::To(from_pattern) => {
+            if let Some(envelope) = f.envelope() {
+                if let Some(to) = envelope.to.as_ref() {
+                    for address in to {
+                        if address.host == None || address.mailbox == None {
+                            continue;
+                        }
                         let mailbox =
                             std::str::from_utf8(&address.mailbox.as_ref().unwrap()).unwrap();
                         let host = std::str::from_utf8(&address.host.as_ref().unwrap()).unwrap();
