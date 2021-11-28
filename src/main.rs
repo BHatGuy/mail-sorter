@@ -7,6 +7,7 @@ use filter_client::FilterClient;
 use flexi_logger::{self, Cleanup, Criterion, FileSpec, Naming};
 use log;
 
+
 fn main() {
     let matches = App::new("imap-sorter")
         .version("1.0")
@@ -34,6 +35,7 @@ fn main() {
         )
         .append()
         .rotate(Criterion::Size(1048576), Naming::Numbers, Cleanup::Never)
+        .format(flexi_logger::opt_format)
         .start()
         .unwrap();
 
