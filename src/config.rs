@@ -4,6 +4,8 @@ use std::fs;
 #[derive(Deserialize, Debug)]
 pub struct Config {
     pub accounts: Vec<Account>,
+    pub log_level: String,
+    pub log_directory: String
 }
 
 #[derive(Deserialize, Debug)]
