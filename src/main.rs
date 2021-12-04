@@ -54,7 +54,6 @@ fn main() {
         .format(my_format)
         .start()
         .unwrap();
-    log::info!("test me pwease!");
 
     for account in config.accounts {
         let mut client = FilterClient::new(
