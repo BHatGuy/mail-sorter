@@ -4,9 +4,25 @@ mod filter_client;
 use clap::{App, Arg, SubCommand};
 use config::Selection;
 use filter_client::FilterClient;
-use flexi_logger::{self, Cleanup, Criterion, FileSpec, Naming};
+use flexi_logger::{self, Cleanup, Criterion, DeferredNow, FileSpec, Naming, Record};
 use log;
+use time::macros::format_description;
 
+fn my_format(
+    w: &mut dyn std::io::Write,
+    now: &mut DeferredNow,
+    record: &Record,
+) -> Result<(), std::io::Error> {
+    write!(
+        w,
+        "[{}] {} {}",
+        now.format(format_description!(
+            "[year]-[month]-[day] [hour]:[minute]:[second].[subsecond digits:6]"
+        )),
+        record.level(),
+        &record.args()
+    )
+}
 
 fn main() {
     let matches = App::new("imap-sorter")
@@ -35,9 +51,10 @@ fn main() {
         )
         .append()
         .rotate(Criterion::Size(1048576), Naming::Numbers, Cleanup::Never)
-        .format(flexi_logger::opt_format)
+        .format(my_format)
         .start()
         .unwrap();
+    log::info!("test me pwease!");
 
     for account in config.accounts {
         let mut client = FilterClient::new(
