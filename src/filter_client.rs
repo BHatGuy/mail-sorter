@@ -26,7 +26,7 @@ impl FilterClient {
     fn get(&mut self, seq_set: &str) -> imap::error::Result<HashSet<Uid>> {
         let mut unread = HashSet::new();
         let fetched = &self.session.fetch(seq_set, "UID")?;
-        for message in fetched {
+        for message in fetched.iter() {
             unread.insert(message.uid.unwrap());
         }
         Ok(unread)
@@ -73,7 +73,7 @@ impl FilterClient {
             "(FLAGS INTERNALDATE RFC822.SIZE ENVELOPE UID)"
         };
         let fetched = self.session.uid_fetch(uid_set, query)?;
-        for f in &fetched {
+        for f in fetched.iter() {
             let matches = patterns.iter().any(|p| check_pattern(&p, f));
             if matches {
                 self.session.uid_mv(format!("{}", f.uid.unwrap()), dest)?;
